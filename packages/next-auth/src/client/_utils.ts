@@ -29,34 +29,45 @@ export interface CtxOrReq {
  * work seemlessly in getInitialProps() on server side
  * pages *and* in _app.js.
  */
+const MAX_ATTEMPTS = 3
 export async function fetchData<T = any>(
   path: string,
   __NEXTAUTH: AuthClientConfig,
   logger: LoggerInstance,
-  { ctx, req = ctx?.req }: CtxOrReq = {}
+  { ctx, req = ctx?.req }: CtxOrReq = {},
 ): Promise<T | null> {
   const url = `${apiBaseUrl(__NEXTAUTH)}/${path}`
-  try {
-    const options: RequestInit = {
-      headers: {
-        "Content-Type": "application/json",
-        ...(req?.headers?.cookie ? { cookie: req.headers.cookie } : {}),
-      },
-    }
+  let attempts = 0
+  while (attempts < MAX_ATTEMPTS) {
+    try {
+      const options: RequestInit = {
+        headers: {
+          "Content-Type": "application/json",
+          ...(req?.headers?.cookie ? { cookie: req.headers.cookie } : {}),
+        },
+      }
 
-    if (req?.body) {
-      options.body = JSON.stringify(req.body)
-      options.method = "POST"
-    }
+      if (req?.body) {
+        options.body = JSON.stringify(req.body)
+        options.method = "POST"
+      }
 
-    const res = await fetch(url, options)
-    const data = await res.json()
-    if (!res.ok) throw data
-    return Object.keys(data).length > 0 ? data : null // Return null if data empty
-  } catch (error) {
-    logger.error("CLIENT_FETCH_ERROR", { error: error as Error, url })
-    return null
+      const res = await fetch(url, options)
+      const data = await res.json()
+      if (!res.ok) throw data
+      return Object.keys(data).length > 0 ? data : null // Return null if data empty
+    } catch (error) {
+      attempts++
+      if (attempts === MAX_ATTEMPTS) {
+        logger.error("CLIENT_FETCH_ERROR", { error: error as Error, url })
+        throw error
+      }
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.pow(2, attempts) * 100),
+      )
+    }
   }
+  return null
 }
 
 export function apiBaseUrl(__NEXTAUTH: AuthClientConfig) {
@@ -106,7 +117,7 @@ export function BroadcastChannel(name = "nextauth.message") {
       try {
         localStorage.setItem(
           name,
-          JSON.stringify({ ...message, timestamp: now() })
+          JSON.stringify({ ...message, timestamp: now() }),
         )
       } catch {
         /**

@@ -1,9 +1,9 @@
 "use client"
 
-import * as React from "react"
+import { AuthError } from "@auth/core/errors"
 import type { ProviderId, ProviderType } from "@auth/core/providers"
 import type { LoggerInstance, Session } from "@auth/core/types"
-import { AuthError } from "@auth/core/errors"
+import * as React from "react"
 
 /** @todo */
 class ClientFetchError extends AuthError {}
@@ -136,6 +136,7 @@ export interface SessionProviderProps {
  * pages *and* in _app.js.
  * @internal
  */
+const MAX_ATTEMPTS = 3
 export async function fetchData<T = any>(
   path: string,
   __NEXTAUTH: AuthClientConfig,
@@ -143,27 +144,39 @@ export async function fetchData<T = any>(
   req: any = {}
 ): Promise<T | null> {
   const url = `${apiBaseUrl(__NEXTAUTH)}/${path}`
-  try {
-    const options: RequestInit = {
-      headers: {
-        "Content-Type": "application/json",
-        ...(req?.headers?.cookie ? { cookie: req.headers.cookie } : {}),
-      },
-    }
+  let attempts = 0
+  while (attempts < MAX_ATTEMPTS) {
+    try {
+      const options: RequestInit = {
+        headers: {
+          "Content-Type": "application/json",
+          ...(req?.headers?.cookie ? { cookie: req.headers.cookie } : {}),
+        },
+      }
 
-    if (req?.body) {
-      options.body = JSON.stringify(req.body)
-      options.method = "POST"
-    }
+      if (req?.body) {
+        options.body = JSON.stringify(req.body)
+        options.method = "POST"
+      }
 
-    const res = await fetch(url, options)
-    const data = await res.json()
-    if (!res.ok) throw data
-    return data
-  } catch (error) {
-    logger.error(new ClientFetchError((error as Error).message, error as any))
-    return null
+      const res = await fetch(url, options)
+      const data = await res.json()
+      if (!res.ok) throw data
+      return data
+    } catch (error) {
+      attempts++
+      if (attempts === MAX_ATTEMPTS) {
+        logger.error(
+          new ClientFetchError((error as Error).message, error as any)
+        )
+        throw error
+      }
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.pow(2, attempts) * 100)
+      )
+    }
   }
+  return null
 }
 
 /** @internal */

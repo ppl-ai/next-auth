@@ -26,17 +26,6 @@ dist
 # Generated files
 .docusaurus
 .cache-loader
-packages/next-auth/providers
-packages/next-auth/src/providers/oauth-types.ts
-packages/next-auth/client
-packages/next-auth/css
-packages/next-auth/utils
-packages/next-auth/core
-packages/next-auth/jwt
-packages/next-auth/react
-packages/next-auth/*.d.ts*
-packages/next-auth/*.js
-packages/next-auth/next
 
 # Development app
 apps/dev/src/css

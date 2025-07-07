@@ -277,6 +277,7 @@ export async function signIn<
   const error = new URL(data.url).searchParams.get("error")
 
   if (res.ok) {
+    broadcast.post({ event: "session", data: { trigger: "signin" } })
     await __NEXTAUTH._getSession({ event: "storage" })
   }
 

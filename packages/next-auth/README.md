@@ -336,6 +336,15 @@ We're happy to announce we've recently created an [OpenCollective](https://openc
 We're open to all community contributions! If you'd like to contribute in any way, please first read
 our [Contributing Guide](https://github.com/nextauthjs/.github/blob/main/CONTRIBUTING.md).
 
+## Tagging for internal PPLX use
+
+1. `pnpm i`
+1. `pnpm build`
+1. `git tag v4.24.<date>` like `git tag v4.24.20250707`
+1. `git push --tags`
+
+Then install with `pnpm i -w github:ppl-ai/next-auth#<tag>&path:packages/next-auth`.
+
 ## License
 
 ISC
